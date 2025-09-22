@@ -1,14 +1,14 @@
 [package]
 name = "creek"
-version = "1.2.2"
-authors = ["Billy Messenger <BillyDM@tutamail.com>"]
+version = "1.2.3"
+authors = ["Billy Messenger <billydm@noreply.codeberg.org>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 keywords = ["audio", "io", "disk", "stream"]
 categories = ["multimedia::audio"]
 description = "Realtime-safe disk streaming to/from audio files"
 documentation = "https://docs.rs/creek"
-repository = "https://github.com/MeadowlarkDAW/creek"
+repository = "https://codeberg.org/Meadowlark/creek"
 readme = "README.md"
 include = [
     "src/",
@@ -57,9 +57,9 @@ decode-all = [
 encode-wav = ["creek-encode-wav"]
 
 [dependencies]
-creek-core = { version = "0.2.2", path = "core" }
-creek-decode-symphonia = { version = "0.3.2", path = "decode_symphonia", optional = true }
-creek-encode-wav = { version = "0.2.0", path = "encode_wav", optional = true }
+creek-core = { version = "0.2.3", path = "core" }
+creek-decode-symphonia = { version = "0.3.3", path = "decode_symphonia", optional = true }
+creek-encode-wav = { version = "0.2.1", path = "encode_wav", optional = true }
 
 # Unoptimized builds result in prominent gaps of silence after cache misses in the demo player.
 [profile.dev]

@@ -1,7 +1,7 @@
 [package]
 name = "writer"
 version = "0.1.0"
-authors = ["Billy Messenger <BillyDM@protonmail.com>"]
+authors = ["Billy Messenger <billydm@noreply.codeberg.org>"]
 edition = "2021"
 publish = false
 

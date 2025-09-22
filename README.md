@@ -4,6 +4,8 @@
 [![Crates.io](https://img.shields.io/crates/v/creek.svg)](https://crates.io/crates/creek)
 [![License](https://img.shields.io/crates/l/creek.svg)](https://github.com/RustyDAW/creek/blob/main/COPYRIGHT)
 
+> This project has moved to [Codeberg](https://codeberg.org/Meadowlark/creek).
+
 Realtime-safe streaming to/from audio files on disk.
 
 The included decoder uses [Symphonia](https://github.com/pdeljanov/Symphonia). Refer to [Symphonia's documentation](https://docs.rs/symphonia/latest/symphonia/#support) for supported codecs. Symphonia's Cargo features are exposed with the prefix `decode-`, except `aac` and `isomp4` which creek does not work with yet. For example, to enable MP3 decoding in creek, enable the `decode-mp3` feature.

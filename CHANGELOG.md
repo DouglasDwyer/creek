@@ -1,5 +1,14 @@
 # Version History
 
+## Unreleased
+
+### Breaking changes:
+
+- Updated `creek-decode-symphonia` to [Symphonia](https://github.com/pdeljanov/Symphonia) 0.6.
+- Bumped the Minimum Supported Rust Version (MSRV) from 1.65 to 1.85 (Symphonia 0.6 requires the Rust 2024 edition).
+- `SymphoniaDecoderInfo::codec_params` is now [`AudioCodecParameters`](https://docs.rs/symphonia-core/latest/symphonia_core/codecs/audio/struct.AudioCodecParameters.html) instead of the removed `CodecParameters` struct.
+- Added the `OpenError::NoAudioPackets` variant, returned when the end of the file is reached before any audio can be decoded.
+
 ## Version 1.2.2 (2024-1-5)
 
 - Fixed clippy warnings

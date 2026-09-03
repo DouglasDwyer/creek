@@ -3,6 +3,7 @@ name = "creek-decode-symphonia"
 version = "0.3.3"
 authors = ["Billy Messenger <billydm@noreply.codeberg.org>"]
 edition = "2021"
+rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 keywords = ["audio", "io", "disk", "stream"]
 categories = ["multimedia::audio"]
@@ -15,7 +16,7 @@ repository = "https://codeberg.org/Meadowlark/creek"
 [dependencies]
 creek-core = { version = "0.2.3", path = "../core" }
 log = "0.4"
-symphonia = "0.5"
+symphonia = "0.6"
 
 [dev-dependencies]
 float-cmp = "0.10"

@@ -7,6 +7,7 @@ pub enum OpenError {
     NoDefaultTrack,
     NoNumFrames,
     NoNumChannels,
+    NoAudioPackets,
 }
 
 impl std::error::Error for OpenError {}
@@ -20,6 +21,9 @@ impl std::fmt::Display for OpenError {
             OpenError::NoNumFrames => write!(f, "Failed to find the number of frames in the file"),
             OpenError::NoNumChannels => {
                 write!(f, "Failed to find the number of channels in the file")
+            }
+            OpenError::NoAudioPackets => {
+                write!(f, "Reached the end of the file without decoding any audio")
             }
         }
     }

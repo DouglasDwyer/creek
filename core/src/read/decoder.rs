@@ -1,8 +1,18 @@
-use std::path::PathBuf;
+use std::io::{Read, Seek};
 use std::{error::Error, fmt::Debug};
 
 use super::DataBlock;
 use crate::FileInfo;
+
+/// A source of encoded audio data for a [`Decoder`].
+///
+/// This is automatically implemented for any type that is `Read + Seek + Send + Sync + 'static`,
+/// such as [`std::fs::File`] or [`std::io::Cursor<Vec<u8>>`](std::io::Cursor). This is what allows
+/// a [`ReadDiskStream`](crate::ReadDiskStream) to stream from something other than a file on disk
+/// (an in-memory buffer, an embedded asset, a memory-mapped file, etc.).
+pub trait ReadSeekSource: Read + Seek + Send + Sync + 'static {}
+
+impl<T: Read + Seek + Send + Sync + 'static> ReadSeekSource for T {}
 
 /// A type that decodes a file in a read stream.
 pub trait Decoder: Sized + 'static {
@@ -37,12 +47,15 @@ pub trait Decoder: Sized + 'static {
     /// case latency scenario.
     const DEFAULT_NUM_LOOK_AHEAD_BLOCKS: usize;
 
-    /// Open the file and start reading from `start_frame`.
+    /// Start reading from `source`, beginning at `start_frame`.
+    ///
+    /// `source` is any `Read + Seek` stream (see [`ReadSeekSource`]), for example an open
+    /// [`File`](std::fs::File) or an [`io::Cursor`](std::io::Cursor) over an in-memory buffer.
     ///
     /// Please note this algorithm depends on knowing the exact number of frames in a file.
     /// Do **not** return an approximate length in the returned `FileInfo`.
     fn new(
-        file: PathBuf,
+        source: Box<dyn ReadSeekSource>,
         start_frame: usize,
         block_size: usize,
         additional_opts: Self::AdditionalOpts,

@@ -55,7 +55,8 @@ impl DemoPlayerApp {
         let cache_size = opts.num_cache_blocks * SymphoniaDecoder::DEFAULT_BLOCK_SIZE;
 
         // Open the read stream.
-        let mut read_stream = ReadDiskStream::<SymphoniaDecoder>::new(file_path, 0, opts).unwrap();
+        let file = std::fs::File::open(&file_path).unwrap();
+        let mut read_stream = ReadDiskStream::<SymphoniaDecoder>::new(file, 0, opts).unwrap();
 
         // Cache the start of the file into cache with index `0`.
         let _ = read_stream.cache(0, 0);

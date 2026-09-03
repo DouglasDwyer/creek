@@ -5,18 +5,17 @@
 #![deny(trivial_numeric_casts)]
 #![forbid(unsafe_code)]
 
-use std::fs::File;
-use std::path::PathBuf;
+use std::io::{self, Read, Seek, SeekFrom};
 
 use symphonia::core::audio::AudioBuffer;
 use symphonia::core::codecs::{CodecParameters, Decoder as SymphDecoder, DecoderOptions};
 use symphonia::core::errors::Error;
 use symphonia::core::formats::{FormatOptions, FormatReader, SeekMode, SeekTo};
-use symphonia::core::io::MediaSourceStream;
+use symphonia::core::io::{MediaSource, MediaSourceStream};
 use symphonia::core::meta::{Metadata, MetadataOptions, MetadataRevision};
 use symphonia::core::probe::Hint;
 
-use creek_core::{DataBlock, Decoder, FileInfo};
+use creek_core::{DataBlock, Decoder, FileInfo, ReadSeekSource};
 
 mod error;
 pub use error::OpenError;
@@ -50,25 +49,19 @@ impl Decoder for SymphoniaDecoder {
     const DEFAULT_NUM_LOOK_AHEAD_BLOCKS: usize = 8;
 
     fn new(
-        file: PathBuf,
+        source: Box<dyn ReadSeekSource>,
         start_frame: usize,
         block_size: usize,
         _additional_opts: Self::AdditionalOpts,
     ) -> Result<(Self, FileInfo<Self::FileParams>), Self::OpenError> {
-        // Create a hint to help the format registry guess what format reader is appropriate.
-        let mut hint = Hint::new();
+        // The format is detected from the contents of the stream, so no hint is provided.
+        let hint = Hint::new();
 
-        // Provide the file extension as a hint.
-        if let Some(extension) = file.extension() {
-            if let Some(extension_str) = extension.to_str() {
-                hint.with_extension(extension_str);
-            }
-        }
-
-        let source = Box::new(File::open(file)?);
-
-        // Create the media source stream using the boxed media source from above.
-        let mss = MediaSourceStream::new(source, Default::default());
+        // Create the media source stream from the caller's `Read + Seek` source.
+        let mss = MediaSourceStream::new(
+            Box::new(GenericMediaSource::new(source)?),
+            Default::default(),
+        );
 
         // Use the default options for metadata and format readers.
         let format_opts: FormatOptions = Default::default();
@@ -366,6 +359,52 @@ pub struct SymphoniaDecoderInfo {
     pub metadata: Option<MetadataRevision>,
 }
 
+/// Adapts a generic [`ReadSeekSource`] into a Symphonia [`MediaSource`].
+///
+/// Symphonia needs `byte_len()` to work from a `&self` method, so the length of the stream is
+/// measured once up-front (via a seek to the end and back).
+struct GenericMediaSource {
+    inner: Box<dyn ReadSeekSource>,
+    byte_len: Option<u64>,
+}
+
+impl GenericMediaSource {
+    fn new(mut inner: Box<dyn ReadSeekSource>) -> io::Result<Self> {
+        let pos = inner.stream_position()?;
+        let end = inner.seek(SeekFrom::End(0))?;
+        if pos != end {
+            inner.seek(SeekFrom::Start(pos))?;
+        }
+
+        Ok(Self {
+            inner,
+            byte_len: Some(end),
+        })
+    }
+}
+
+impl Read for GenericMediaSource {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+impl Seek for GenericMediaSource {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        self.inner.seek(pos)
+    }
+}
+
+impl MediaSource for GenericMediaSource {
+    fn is_seekable(&self) -> bool {
+        true
+    }
+
+    fn byte_len(&self) -> Option<u64> {
+        self.byte_len
+    }
+}
+
 fn frame_to_symphonia_time(frame: u64, sample_rate: u32) -> symphonia::core::units::Time {
     // Doing it this way is more accurate for large inputs than just using f64s.
     let seconds = frame / u64::from(sample_rate);
@@ -381,6 +420,11 @@ fn frame_to_symphonia_time(frame: u64, sample_rate: u32) -> symphonia::core::uni
 mod tests {
     use super::*;
     use float_cmp::*;
+    use std::fs::File;
+
+    fn open(path: &str) -> Box<dyn ReadSeekSource> {
+        Box::new(File::open(path).unwrap())
+    }
 
     #[test]
     fn decoder_new() {
@@ -403,7 +447,7 @@ mod tests {
         for file in files {
             dbg!(file.0);
             let decoder =
-                SymphoniaDecoder::new(file.0.into(), 0, SymphoniaDecoder::DEFAULT_BLOCK_SIZE, ());
+                SymphoniaDecoder::new(open(file.0), 0, SymphoniaDecoder::DEFAULT_BLOCK_SIZE, ());
             match decoder {
                 Ok((_, file_info)) => {
                     assert_eq!(file_info.num_channels, file.1);
@@ -422,7 +466,7 @@ mod tests {
         let block_size = 10;
 
         let decoder =
-            SymphoniaDecoder::new("../test_files/wav_u8_mono.wav".into(), 0, block_size, ());
+            SymphoniaDecoder::new(open("../test_files/wav_u8_mono.wav"), 0, block_size, ());
 
         let (mut decoder, file_info) = decoder.unwrap();
 

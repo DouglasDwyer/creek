@@ -1,11 +1,10 @@
 use rtrb::{Consumer, Producer, RingBuffer};
-use std::path::PathBuf;
 
 use super::data::{DataBlockCacheEntry, DataBlockEntry};
 use super::error::{FatalReadError, ReadError};
 use super::{
-    ClientToServerMsg, DataBlock, Decoder, HeapData, ReadData, ReadServer, ReadStreamOptions,
-    ServerToClientMsg,
+    ClientToServerMsg, DataBlock, Decoder, HeapData, ReadData, ReadSeekSource, ReadServer,
+    ReadStreamOptions, ServerToClientMsg,
 };
 use crate::read::server::ReadServerOptions;
 use crate::{FileInfo, SERVER_WAIT_TIME};
@@ -72,7 +71,9 @@ pub struct ReadDiskStream<D: Decoder> {
 impl<D: Decoder> ReadDiskStream<D> {
     /// Open a new realtime-safe disk-streaming reader.
     ///
-    /// * `file` - The path to the file to open.
+    /// * `source` - The `Read + Seek` stream to read the encoded audio from (see
+    ///   [`ReadSeekSource`]). To stream from a file on disk, pass
+    ///   `std::fs::File::open(path)?`.
     /// * `start_frame` - The frame in the file to start reading from.
     /// * `stream_opts` - Additional stream options.
     ///
@@ -80,8 +81,8 @@ impl<D: Decoder> ReadDiskStream<D> {
     ///
     /// This will panic if `stream_block_size`, `stream_num_look_ahead_blocks`,
     /// or `stream_server_msg_channel_size` is `0`.
-    pub fn new<P: Into<PathBuf>>(
-        file: P,
+    pub fn new<S: ReadSeekSource>(
+        source: S,
         start_frame: usize,
         stream_opts: ReadStreamOptions<D>,
     ) -> Result<ReadDiskStream<D>, D::OpenError> {
@@ -110,11 +111,9 @@ impl<D: Decoder> ReadDiskStream<D> {
         // Create dedicated close signal.
         let (close_signal_tx, close_signal_rx) = RingBuffer::<Option<HeapData<D::T>>>::new(1);
 
-        let file: PathBuf = file.into();
-
         match ReadServer::spawn(
             ReadServerOptions {
-                file,
+                source: Box::new(source),
                 start_frame,
                 num_prefetch_blocks: num_cache_blocks + num_look_ahead_blocks,
                 block_size,

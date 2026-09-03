@@ -41,10 +41,15 @@ use creek::{
 };
 
 // Open a read stream.
+//
+// The reader accepts any `Read + Seek` source, so you could also stream from an
+// in-memory buffer with `std::io::Cursor`, an embedded asset, etc.
 
+
+let file = std::fs::File::open("./test_files/wav_f32_stereo.wav").unwrap();
 
 let mut read_disk_stream = ReadDiskStream::<SymphoniaDecoder>::new(
-    "./test_files/wav_f32_stereo.wav",  // Path to file.
+    file,  // The `Read + Seek` source to stream from.
     0,  // The frame in the file to start reading from.
     Default::default(),  // Use default read stream options.
 ).unwrap();

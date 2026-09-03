@@ -1,13 +1,14 @@
-use std::path::PathBuf;
-
 use rtrb::{Consumer, Producer, RingBuffer};
 
 use crate::{FileInfo, SERVER_WAIT_TIME};
 
-use super::{ClientToServerMsg, DataBlock, DataBlockCache, Decoder, HeapData, ServerToClientMsg};
+use super::{
+    ClientToServerMsg, DataBlock, DataBlockCache, Decoder, HeapData, ReadSeekSource,
+    ServerToClientMsg,
+};
 
 pub(crate) struct ReadServerOptions<D: Decoder> {
-    pub file: PathBuf,
+    pub source: Box<dyn ReadSeekSource>,
     pub start_frame: usize,
     pub num_prefetch_blocks: usize,
     pub block_size: usize,
@@ -40,7 +41,7 @@ impl<D: Decoder> ReadServer<D> {
         close_signal_rx: Consumer<Option<HeapData<D::T>>>,
     ) -> Result<FileInfo<D::FileParams>, D::OpenError> {
         let ReadServerOptions {
-            file,
+            source,
             start_frame,
             num_prefetch_blocks,
             block_size,
@@ -51,7 +52,7 @@ impl<D: Decoder> ReadServer<D> {
             RingBuffer::<Result<FileInfo<D::FileParams>, D::OpenError>>::new(1);
 
         std::thread::spawn(move || {
-            match D::new(file, start_frame, block_size, additional_opts) {
+            match D::new(source, start_frame, block_size, additional_opts) {
                 Ok((decoder, file_info)) => {
                     let num_channels = file_info.num_channels;
 

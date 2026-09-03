@@ -1,5 +1,14 @@
 # Version History
 
+## Unreleased
+
+### Breaking changes:
+
+- `ReadDiskStream::new` and `Decoder::new` now take any `Read + Seek` source (see the new
+  `ReadSeekSource` trait) instead of a file path, so a read stream can be backed by an in-memory
+  buffer, an embedded asset, etc. To stream from a file on disk, pass `std::fs::File::open(path)?`.
+  Resolves [#57](https://codeberg.org/Meadowlark/creek/issues/57).
+
 ## Version 1.2.2 (2024-1-5)
 
 - Fixed clippy warnings
